@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Busan Trip Planner",
+  "description": "A customized travel itinerary app for Busan, featuring editable schedules, packing checklists, and travel details in a soothing ocean-blue theme.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

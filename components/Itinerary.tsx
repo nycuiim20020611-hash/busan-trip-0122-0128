@@ -1,0 +1,299 @@
+import React, { useState } from 'react';
+import { Plus, Trash2, Edit2, MapPin, Coffee, Train, Star, X, Save, ShoppingBag, CalendarDays, Clock } from 'lucide-react';
+import { ItineraryItem } from '../types';
+
+interface ItineraryProps {
+  items: ItineraryItem[];
+  setItems: (items: ItineraryItem[]) => void;
+}
+
+const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
+  const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Group items by date
+  const groupedItems = items.reduce((acc, item) => {
+    if (!acc[item.date]) acc[item.date] = [];
+    acc[item.date].push(item);
+    return acc;
+  }, {} as Record<string, ItineraryItem[]>);
+
+  // Sort dates
+  const sortedDates = Object.keys(groupedItems).sort();
+
+  const handleEdit = (item: ItineraryItem) => {
+    setEditingItem({ ...item });
+    setIsModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    const newItem: ItineraryItem = {
+      id: Date.now().toString(),
+      date: '2026-01-22',
+      time: '12:00',
+      activity: '新行程',
+      category: 'activity',
+      location: '',
+      notes: ''
+    };
+    setEditingItem(newItem);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm('確定要刪除這個行程嗎？')) {
+      setItems(items.filter(i => i.id !== id));
+    }
+  };
+
+  const handleSave = () => {
+    if (!editingItem) return;
+    
+    // Check if updating or adding new
+    const exists = items.find(i => i.id === editingItem.id);
+    if (exists) {
+      setItems(items.map(i => i.id === editingItem.id ? editingItem : i));
+    } else {
+      setItems([...items, editingItem]);
+    }
+    setIsModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const getIcon = (category: string) => {
+    switch (category) {
+      case 'food': return <Coffee className="w-4 h-4 text-orange-500" />;
+      case 'transport': return <Train className="w-4 h-4 text-blue-500" />;
+      case 'activity': return <Star className="w-4 h-4 text-yellow-500" />;
+      case 'shopping': return <ShoppingBag className="w-4 h-4 text-pink-500" />;
+      default: return <MapPin className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getDayOfWeek = (dateStr: string) => {
+    const days = ['日', '一', '二', '三', '四', '五', '六'];
+    const d = new Date(dateStr);
+    return `星期${days[d.getDay()]}`;
+  };
+
+  // Generate 24h time options
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+
+  const updateTime = (type: 'hour' | 'minute', val: string) => {
+    if (!editingItem) return;
+    const [h, m] = editingItem.time.split(':');
+    if (type === 'hour') {
+        setEditingItem({...editingItem, time: `${val}:${m}`});
+    } else {
+        setEditingItem({...editingItem, time: `${h}:${val}`});
+    }
+  };
+
+  return (
+    <div className="pb-24">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-ocean-800">行程表</h2>
+        <button 
+          onClick={handleAddNew}
+          className="bg-ocean-500 hover:bg-ocean-600 text-white px-4 py-2 rounded-full flex items-center shadow-lg transition-all active:scale-95"
+        >
+          <Plus size={18} className="mr-1" /> 新增
+        </button>
+      </div>
+
+      <div className="space-y-8">
+        {sortedDates.map(date => (
+          <div key={date} className="relative">
+             <div className="sticky top-0 bg-ocean-50/95 backdrop-blur-sm z-10 py-3 border-b border-ocean-200 mb-4 flex items-baseline">
+                <span className="text-2xl font-bold text-ocean-700 mr-2">{date.split('-')[1]}/{date.split('-')[2]}</span>
+                <span className="text-sm text-slate-500 font-medium">{getDayOfWeek(date)}</span>
+             </div>
+             
+             <div className="space-y-4 pl-4 border-l-2 border-ocean-200 ml-2">
+                {groupedItems[date]
+                  .sort((a, b) => a.time.localeCompare(b.time))
+                  .map(item => (
+                    <div key={item.id} className="relative bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
+                      
+                      {/* Timeline Dot */}
+                      <div className="absolute -left-[25px] top-6 w-4 h-4 bg-white border-4 border-ocean-400 rounded-full"></div>
+
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                           <div className="flex items-center text-sm text-ocean-600 font-bold mb-1">
+                              {item.time} 
+                              <span className="mx-2 text-slate-300">|</span> 
+                              <span className="flex items-center gap-1 uppercase text-xs tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                                {getIcon(item.category)}
+                                {item.category}
+                              </span>
+                           </div>
+                           <h3 className="text-lg font-bold text-slate-800 mb-1">{item.activity}</h3>
+                           {item.location && (
+                             <div className="flex items-center text-slate-500 text-sm mb-1">
+                               <MapPin size={14} className="mr-1" /> {item.location}
+                             </div>
+                           )}
+                           {item.notes && (
+                             <p className="text-sm text-slate-500 mt-2 bg-ocean-50 p-2 rounded-lg inline-block">
+                               {item.notes}
+                             </p>
+                           )}
+                        </div>
+                        
+                        <div className="flex flex-col gap-2 ml-2 relative z-20">
+                          <button 
+                            type="button"
+                            onClick={() => handleEdit(item)} 
+                            className="p-2 text-slate-400 hover:text-ocean-600 hover:bg-ocean-50 rounded-full transition-colors cursor-pointer"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={(e) => handleDelete(item.id, e)} 
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                ))}
+             </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Edit Modal */}
+      {isModalOpen && editingItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-ocean-50">
+              <h3 className="font-bold text-lg text-ocean-800">
+                {items.find(i => i.id === editingItem.id) ? '編輯行程' : '新增行程'}
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">日期</label>
+                  <div className="relative">
+                    <input 
+                        type="date" 
+                        className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400"
+                        value={editingItem.date}
+                        min="2026-01-22"
+                        max="2026-01-28"
+                        onChange={(e) => setEditingItem({...editingItem, date: e.target.value})}
+                    />
+                    <CalendarDays size={18} className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">時間 (24h)</label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                        <select 
+                            className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400 appearance-none text-center font-bold text-lg"
+                            value={editingItem.time.split(':')[0]}
+                            onChange={(e) => updateTime('hour', e.target.value)}
+                        >
+                            {hours.map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                    </div>
+                    <span className="font-bold text-slate-400">:</span>
+                    <div className="relative flex-1">
+                        <select 
+                            className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400 appearance-none text-center font-bold text-lg"
+                            value={editingItem.time.split(':')[1]}
+                            onChange={(e) => updateTime('minute', e.target.value)}
+                        >
+                             {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">活動名稱</label>
+                  <input 
+                    type="text" 
+                    className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400"
+                    value={editingItem.activity}
+                    onChange={(e) => setEditingItem({...editingItem, activity: e.target.value})}
+                    placeholder="例如: 吃烤肉"
+                  />
+              </div>
+
+              <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">地點</label>
+                  <input 
+                    type="text" 
+                    className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400"
+                    value={editingItem.location || ''}
+                    onChange={(e) => setEditingItem({...editingItem, location: e.target.value})}
+                    placeholder="例如: 海雲台"
+                  />
+              </div>
+
+              <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">類別</label>
+                  <div className="flex gap-2">
+                    {['food', 'activity', 'transport', 'shopping', 'other'].map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setEditingItem({...editingItem, category: cat as any})}
+                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          editingItem.category === cat 
+                          ? 'bg-ocean-500 text-white' 
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        }`}
+                      >
+                        {cat === 'food' ? '美食' : cat === 'activity' ? '景點' : cat === 'transport' ? '交通' : cat === 'shopping' ? '購物' : '其他'}
+                      </button>
+                    ))}
+                  </div>
+              </div>
+
+              <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">備註</label>
+                  <textarea 
+                    className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400 min-h-[100px]"
+                    value={editingItem.notes || ''}
+                    onChange={(e) => setEditingItem({...editingItem, notes: e.target.value})}
+                    placeholder="備註事項..."
+                  />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                onClick={handleSave}
+                className="flex-1 py-3 bg-ocean-600 text-white font-bold rounded-xl shadow-lg shadow-ocean-200 hover:bg-ocean-700 hover:shadow-xl transition-all flex justify-center items-center gap-2"
+              >
+                <Save size={18} /> 儲存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Itinerary;
