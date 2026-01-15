@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, MapPin, Coffee, Train, Star, X, Save, ShoppingBag, CalendarDays, Clock } from 'lucide-react';
 import { ItineraryItem } from '../types';
+import ConfirmModal from './ConfirmModal';
 
 interface ItineraryProps {
   items: ItineraryItem[];
@@ -10,6 +11,7 @@ interface ItineraryProps {
 const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
   const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Group items by date
   const groupedItems = items.reduce((acc, item) => {
@@ -43,14 +45,19 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm('確定要刪除這個行程嗎？')) {
-      setItems(items.filter(i => i.id !== id));
+    setDeleteId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteId) {
+      setItems(items.filter(i => i.id !== deleteId));
+      setDeleteId(null);
     }
   };
 
   const handleSave = () => {
     if (!editingItem) return;
-    
+
     // Check if updating or adding new
     const exists = items.find(i => i.id === editingItem.id);
     if (exists) {
@@ -86,9 +93,9 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
     if (!editingItem) return;
     const [h, m] = editingItem.time.split(':');
     if (type === 'hour') {
-        setEditingItem({...editingItem, time: `${val}:${m}`});
+      setEditingItem({ ...editingItem, time: `${val}:${m}` });
     } else {
-        setEditingItem({...editingItem, time: `${h}:${val}`});
+      setEditingItem({ ...editingItem, time: `${h}:${val}` });
     }
   };
 
@@ -96,7 +103,7 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
     <div className="pb-24">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-ocean-800">行程表</h2>
-        <button 
+        <button
           onClick={handleAddNew}
           className="bg-ocean-500 hover:bg-ocean-600 text-white px-4 py-2 rounded-full flex items-center shadow-lg transition-all active:scale-95"
         >
@@ -107,63 +114,63 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
       <div className="space-y-8">
         {sortedDates.map(date => (
           <div key={date} className="relative">
-             <div className="sticky top-0 bg-ocean-50/95 backdrop-blur-sm z-10 py-3 border-b border-ocean-200 mb-4 flex items-baseline">
-                <span className="text-2xl font-bold text-ocean-700 mr-2">{date.split('-')[1]}/{date.split('-')[2]}</span>
-                <span className="text-sm text-slate-500 font-medium">{getDayOfWeek(date)}</span>
-             </div>
-             
-             <div className="space-y-4 pl-4 border-l-2 border-ocean-200 ml-2">
-                {groupedItems[date]
-                  .sort((a, b) => a.time.localeCompare(b.time))
-                  .map(item => (
-                    <div key={item.id} className="relative bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
-                      
-                      {/* Timeline Dot */}
-                      <div className="absolute -left-[25px] top-6 w-4 h-4 bg-white border-4 border-ocean-400 rounded-full"></div>
+            <div className="sticky top-0 bg-ocean-50/95 backdrop-blur-sm z-10 py-3 border-b border-ocean-200 mb-4 flex items-baseline">
+              <span className="text-2xl font-bold text-ocean-700 mr-2">{date.split('-')[1]}/{date.split('-')[2]}</span>
+              <span className="text-sm text-slate-500 font-medium">{getDayOfWeek(date)}</span>
+            </div>
 
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                           <div className="flex items-center text-sm text-ocean-600 font-bold mb-1">
-                              {item.time} 
-                              <span className="mx-2 text-slate-300">|</span> 
-                              <span className="flex items-center gap-1 uppercase text-xs tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                                {getIcon(item.category)}
-                                {item.category}
-                              </span>
-                           </div>
-                           <h3 className="text-lg font-bold text-slate-800 mb-1">{item.activity}</h3>
-                           {item.location && (
-                             <div className="flex items-center text-slate-500 text-sm mb-1">
-                               <MapPin size={14} className="mr-1" /> {item.location}
-                             </div>
-                           )}
-                           {item.notes && (
-                             <p className="text-sm text-slate-500 mt-2 bg-ocean-50 p-2 rounded-lg inline-block">
-                               {item.notes}
-                             </p>
-                           )}
+            <div className="space-y-4 pl-4 border-l-2 border-ocean-200 ml-2">
+              {groupedItems[date]
+                .sort((a, b) => a.time.localeCompare(b.time))
+                .map(item => (
+                  <div key={item.id} className="relative bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
+
+                    {/* Timeline Dot */}
+                    <div className="absolute -left-[25px] top-6 w-4 h-4 bg-white border-4 border-ocean-400 rounded-full"></div>
+
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center text-sm text-ocean-600 font-bold mb-1">
+                          {item.time}
+                          <span className="mx-2 text-slate-300">|</span>
+                          <span className="flex items-center gap-1 uppercase text-xs tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                            {getIcon(item.category)}
+                            {item.category}
+                          </span>
                         </div>
-                        
-                        <div className="flex flex-col gap-2 ml-2 relative z-20">
-                          <button 
-                            type="button"
-                            onClick={() => handleEdit(item)} 
-                            className="p-2 text-slate-400 hover:text-ocean-600 hover:bg-ocean-50 rounded-full transition-colors cursor-pointer"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={(e) => handleDelete(item.id, e)} 
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 mb-1">{item.activity}</h3>
+                        {item.location && (
+                          <div className="flex items-center text-slate-500 text-sm mb-1">
+                            <MapPin size={14} className="mr-1" /> {item.location}
+                          </div>
+                        )}
+                        {item.notes && (
+                          <p className="text-sm text-slate-500 mt-2 bg-ocean-50 p-2 rounded-lg inline-block">
+                            {item.notes}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2 ml-2 relative z-20">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(item)}
+                          className="p-2 text-slate-400 hover:text-ocean-600 hover:bg-ocean-50 rounded-full transition-colors cursor-pointer"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDelete(item.id, e)}
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </div>
+                  </div>
                 ))}
-             </div>
+            </div>
           </div>
         ))}
       </div>
@@ -180,19 +187,19 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
                 <X size={24} />
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">日期</label>
                   <div className="relative">
-                    <input 
-                        type="date" 
-                        className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400"
-                        value={editingItem.date}
-                        min="2026-01-22"
-                        max="2026-01-28"
-                        onChange={(e) => setEditingItem({...editingItem, date: e.target.value})}
+                    <input
+                      type="date"
+                      className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400"
+                      value={editingItem.date}
+                      min="2026-01-22"
+                      max="2026-01-28"
+                      onChange={(e) => setEditingItem({ ...editingItem, date: e.target.value })}
                     />
                     <CalendarDays size={18} className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" />
                   </div>
@@ -201,88 +208,87 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">時間 (24h)</label>
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
-                        <select 
-                            className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400 appearance-none text-center font-bold text-lg"
-                            value={editingItem.time.split(':')[0]}
-                            onChange={(e) => updateTime('hour', e.target.value)}
-                        >
-                            {hours.map(h => <option key={h} value={h}>{h}</option>)}
-                        </select>
+                      <select
+                        className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400 appearance-none text-center font-bold text-lg"
+                        value={editingItem.time.split(':')[0]}
+                        onChange={(e) => updateTime('hour', e.target.value)}
+                      >
+                        {hours.map(h => <option key={h} value={h}>{h}</option>)}
+                      </select>
                     </div>
                     <span className="font-bold text-slate-400">:</span>
                     <div className="relative flex-1">
-                        <select 
-                            className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400 appearance-none text-center font-bold text-lg"
-                            value={editingItem.time.split(':')[1]}
-                            onChange={(e) => updateTime('minute', e.target.value)}
-                        >
-                             {minutes.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
+                      <select
+                        className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400 appearance-none text-center font-bold text-lg"
+                        value={editingItem.time.split(':')[1]}
+                        onChange={(e) => updateTime('minute', e.target.value)}
+                      >
+                        {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">活動名稱</label>
-                  <input 
-                    type="text" 
-                    className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400"
-                    value={editingItem.activity}
-                    onChange={(e) => setEditingItem({...editingItem, activity: e.target.value})}
-                    placeholder="例如: 吃烤肉"
-                  />
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">活動名稱</label>
+                <input
+                  type="text"
+                  className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400"
+                  value={editingItem.activity}
+                  onChange={(e) => setEditingItem({ ...editingItem, activity: e.target.value })}
+                  placeholder="例如: 吃烤肉"
+                />
               </div>
 
               <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">地點</label>
-                  <input 
-                    type="text" 
-                    className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400"
-                    value={editingItem.location || ''}
-                    onChange={(e) => setEditingItem({...editingItem, location: e.target.value})}
-                    placeholder="例如: 海雲台"
-                  />
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">地點</label>
+                <input
+                  type="text"
+                  className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400"
+                  value={editingItem.location || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, location: e.target.value })}
+                  placeholder="例如: 海雲台"
+                />
               </div>
 
               <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">類別</label>
-                  <div className="flex gap-2">
-                    {['food', 'activity', 'transport', 'shopping', 'other'].map(cat => (
-                      <button
-                        key={cat}
-                        onClick={() => setEditingItem({...editingItem, category: cat as any})}
-                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          editingItem.category === cat 
-                          ? 'bg-ocean-500 text-white' 
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">類別</label>
+                <div className="flex gap-2">
+                  {['food', 'activity', 'transport', 'shopping', 'other'].map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setEditingItem({ ...editingItem, category: cat as any })}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${editingItem.category === cat
+                          ? 'bg-ocean-500 text-white'
                           : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                         }`}
-                      >
-                        {cat === 'food' ? '美食' : cat === 'activity' ? '景點' : cat === 'transport' ? '交通' : cat === 'shopping' ? '購物' : '其他'}
-                      </button>
-                    ))}
-                  </div>
+                    >
+                      {cat === 'food' ? '美食' : cat === 'activity' ? '景點' : cat === 'transport' ? '交通' : cat === 'shopping' ? '購物' : '其他'}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">備註</label>
-                  <textarea 
-                    className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400 min-h-[100px]"
-                    value={editingItem.notes || ''}
-                    onChange={(e) => setEditingItem({...editingItem, notes: e.target.value})}
-                    placeholder="備註事項..."
-                  />
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">備註</label>
+                <textarea
+                  className="w-full p-3 bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ocean-400 min-h-[100px]"
+                  value={editingItem.notes || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, notes: e.target.value })}
+                  placeholder="備註事項..."
+                />
               </div>
             </div>
 
             <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-colors"
               >
                 取消
               </button>
-              <button 
+              <button
                 onClick={handleSave}
                 className="flex-1 py-3 bg-ocean-600 text-white font-bold rounded-xl shadow-lg shadow-ocean-200 hover:bg-ocean-700 hover:shadow-xl transition-all flex justify-center items-center gap-2"
               >
@@ -292,6 +298,16 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+        title="刪除行程"
+        message="確定要刪除這個行程嗎？此動作無法復原。"
+        confirmText="刪除"
+        isDangerous={true}
+      />
     </div>
   );
 };
