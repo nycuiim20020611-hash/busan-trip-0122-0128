@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ShoppingBag, UtensilsCrossed, Camera, CheckSquare, Square, Trash2, Plus, BedDouble, Bus, Edit2, X, Save } from 'lucide-react';
+import { ShoppingBag, UtensilsCrossed, Camera, CheckSquare, Square, Trash2, Plus, BedDouble, Bus, Edit2, X, Save, MapPin } from 'lucide-react';
 import { WishlistItem, WishlistCategory } from '../types';
 import ConfirmModal from './ConfirmModal';
+import { getKoreanLocation } from '../services/openai';
 
 interface WishlistProps {
     items: WishlistItem[];
@@ -51,6 +52,17 @@ const Wishlist: React.FC<WishlistProps> = ({ items, setItems }) => {
         setEditingItem(null);
     };
 
+    const handleOpenMap = async (name: string) => {
+        if (!name) return;
+        try {
+            const { koreanName } = await getKoreanLocation(name);
+            window.open(`https://map.naver.com/p/search/${encodeURIComponent(koreanName)}`, '_blank');
+        } catch (error) {
+            console.error("Failed to open map", error);
+            window.open(`https://map.naver.com/p/search/${encodeURIComponent(name)}`, '_blank');
+        }
+    };
+
     const categories: { key: WishlistCategory, label: string, icon: any, color: string, bg: string }[] = [
         { key: 'food', label: '食', icon: UtensilsCrossed, color: 'text-orange-500', bg: 'bg-orange-50' },
         { key: 'shopping', label: '衣', icon: ShoppingBag, color: 'text-pink-500', bg: 'bg-pink-50' },
@@ -78,6 +90,13 @@ const Wishlist: React.FC<WishlistProps> = ({ items, setItems }) => {
                             <span className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">{getIcon(item.category)}</span>
                         )}
                         <h4 className={`font-bold text-slate-800 truncate ${item.checked ? 'line-through' : ''}`}>{item.name}</h4>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenMap(item.name); }}
+                            className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full hover:bg-green-200 transition-colors flex items-center gap-1 ml-2 shrink-0"
+                            title="在 Naver Map 開啟"
+                        >
+                            <MapPin size={10} /> Map
+                        </button>
                     </div>
                     {item.note && <p className="text-sm text-slate-500 truncate">{item.note}</p>}
                 </div>
@@ -111,8 +130,8 @@ const Wishlist: React.FC<WishlistProps> = ({ items, setItems }) => {
                 <button
                     onClick={() => setFilter('all')}
                     className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all shadow-sm ${filter === 'all'
-                            ? 'bg-ocean-600 text-white shadow-ocean-200 ring-2 ring-ocean-100'
-                            : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                        ? 'bg-ocean-600 text-white shadow-ocean-200 ring-2 ring-ocean-100'
+                        : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
                         }`}
                 >
                     全部
@@ -122,8 +141,8 @@ const Wishlist: React.FC<WishlistProps> = ({ items, setItems }) => {
                         key={cat.key}
                         onClick={() => setFilter(cat.key)}
                         className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1 shadow-sm ${filter === cat.key
-                                ? 'bg-ocean-600 text-white shadow-ocean-200 ring-2 ring-ocean-100'
-                                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                            ? 'bg-ocean-600 text-white shadow-ocean-200 ring-2 ring-ocean-100'
+                            : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
                             }`}
                     >
                         <cat.icon size={14} />
@@ -151,8 +170,8 @@ const Wishlist: React.FC<WishlistProps> = ({ items, setItems }) => {
                             type="button"
                             onClick={() => setNewItemCategory(cat.key)}
                             className={`flex-1 min-w-[60px] py-2 rounded-lg text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 border ${newItemCategory === cat.key
-                                    ? 'bg-white border-ocean-500 text-ocean-600 ring-2 ring-ocean-200'
-                                    : 'bg-slate-50 border-transparent text-slate-400 hover:bg-white'
+                                ? 'bg-white border-ocean-500 text-ocean-600 ring-2 ring-ocean-200'
+                                : 'bg-slate-50 border-transparent text-slate-400 hover:bg-white'
                                 }`}
                         >
                             <cat.icon size={18} className={newItemCategory === cat.key ? cat.color : ''} />
@@ -221,8 +240,8 @@ const Wishlist: React.FC<WishlistProps> = ({ items, setItems }) => {
                                         type="button"
                                         onClick={() => setEditingItem({ ...editingItem, category: cat.key })}
                                         className={`flex-1 min-w-[50px] py-2 rounded-lg text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 border ${editingItem.category === cat.key
-                                                ? 'bg-white border-ocean-500 text-ocean-600 ring-2 ring-ocean-200'
-                                                : 'bg-slate-50 border-transparent text-slate-400 hover:bg-white'
+                                            ? 'bg-white border-ocean-500 text-ocean-600 ring-2 ring-ocean-200'
+                                            : 'bg-slate-50 border-transparent text-slate-400 hover:bg-white'
                                             }`}
                                     >
                                         <cat.icon size={16} className={editingItem.category === cat.key ? cat.color : ''} />

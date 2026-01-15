@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, MapPin, Coffee, Train, Star, X, Save, ShoppingBag, CalendarDays, Clock } from 'lucide-react';
 import { ItineraryItem } from '../types';
 import ConfirmModal from './ConfirmModal';
+import { getKoreanLocation } from '../services/openai';
 
 interface ItineraryProps {
   items: ItineraryItem[];
@@ -12,6 +13,7 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
   const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('all');
 
   // Group items by date
   const groupedItems = items.reduce((acc, item) => {
@@ -23,6 +25,11 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
   // Sort dates
   const sortedDates = Object.keys(groupedItems).sort();
 
+  // Filter dates based on selection
+  const displayDates = selectedDate === 'all'
+    ? sortedDates
+    : sortedDates.filter(d => d === selectedDate);
+
   const handleEdit = (item: ItineraryItem) => {
     setEditingItem({ ...item });
     setIsModalOpen(true);
@@ -31,7 +38,7 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
   const handleAddNew = () => {
     const newItem: ItineraryItem = {
       id: Date.now().toString(),
-      date: '2026-01-22',
+      date: selectedDate === 'all' ? '2026-01-22' : selectedDate,
       time: '12:00',
       activity: '新行程',
       category: 'activity',
@@ -99,6 +106,50 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
     }
   };
 
+  const handleOpenMap = async (location: string) => {
+    if (!location) return;
+
+    // 1. 【關鍵】先打開一個空白分頁
+    // 這必須在點擊的第一時間執行，才能避開瀏覽器的 Popup 攔截
+    const newWindow = window.open('', '_blank');
+
+    // 2. 在新分頁中給予使用者反饋 (Loading 狀態)
+    // 這樣使用者知道系統正在運作，而不是當機
+    if (newWindow) {
+      newWindow.document.title = "Naver Map 搜尋中...";
+      newWindow.document.body.innerHTML = `
+      <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;">
+        <h3>正在搜尋 Naver Map...</h3>
+        <p>正在將「${location}」轉換為韓文精準定位</p>
+        <div style="margin-top:10px; color: #666;">請稍候...</div>
+      </div>
+    `;
+    }
+
+    try {
+      // 3. 執行 AI 轉換
+      const result = await getKoreanLocation(location);
+
+      // 解析結果 (根據你 System Prompt 設定的 JSON key)
+      // 優先順序：韓文店名 > 韓文地址 > 原文中
+      const query = result.koreanName || result.address || location;
+
+      // 4. 拿到結果後，將剛剛那個空白分頁轉址到 Naver Map
+      if (newWindow) {
+        newWindow.location.href = `https://map.naver.com/p/search/${encodeURIComponent(query)}`;
+      }
+
+    } catch (error) {
+      console.error("Failed to translate", error);
+
+      // 5. 如果 AI 失敗或超時，還是要將分頁導向 (Fallback)
+      // 直接用中文搜尋
+      if (newWindow) {
+        newWindow.location.href = `https://map.naver.com/p/search/${encodeURIComponent(location)}`;
+      }
+    }
+  };
+
   return (
     <div className="pb-24">
       <div className="flex justify-between items-center mb-6">
@@ -111,8 +162,33 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
         </button>
       </div>
 
-      <div className="space-y-8">
+      {/* Date Filter */}
+      <div className="flex overflow-x-auto pb-4 mb-4 gap-2 no-scrollbar">
+        <button
+          onClick={() => setSelectedDate('all')}
+          className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${selectedDate === 'all'
+            ? 'bg-ocean-600 text-white shadow-md'
+            : 'bg-white text-slate-500 border border-slate-200 hover:bg-ocean-50'
+            }`}
+        >
+          全部
+        </button>
         {sortedDates.map(date => (
+          <button
+            key={date}
+            onClick={() => setSelectedDate(date)}
+            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all whitespace-nowrap ${selectedDate === date
+              ? 'bg-ocean-600 text-white shadow-md'
+              : 'bg-white text-slate-500 border border-slate-200 hover:bg-ocean-50'
+              }`}
+          >
+            {date.split('-')[1]}/{date.split('-')[2]} ({getDayOfWeek(date)})
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-8">
+        {displayDates.map(date => (
           <div key={date} className="relative">
             <div className="sticky top-0 bg-ocean-50/95 backdrop-blur-sm z-10 py-3 border-b border-ocean-200 mb-4 flex items-baseline">
               <span className="text-2xl font-bold text-ocean-700 mr-2">{date.split('-')[1]}/{date.split('-')[2]}</span>
@@ -141,7 +217,15 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
                         <h3 className="text-lg font-bold text-slate-800 mb-1">{item.activity}</h3>
                         {item.location && (
                           <div className="flex items-center text-slate-500 text-sm mb-1">
-                            <MapPin size={14} className="mr-1" /> {item.location}
+                            <MapPin size={14} className="mr-1" />
+                            <span className="mr-2">{item.location}</span>
+                            <button
+                              onClick={() => handleOpenMap(item.location!)}
+                              className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full hover:bg-green-600 transition-colors flex items-center gap-1"
+                              title="在 Naver Map 開啟"
+                            >
+                              <MapPin size={10} /> Naver Map
+                            </button>
                           </div>
                         )}
                         {item.notes && (
@@ -260,8 +344,8 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
                       key={cat}
                       onClick={() => setEditingItem({ ...editingItem, category: cat as any })}
                       className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${editingItem.category === cat
-                          ? 'bg-ocean-500 text-white'
-                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        ? 'bg-ocean-500 text-white'
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                         }`}
                     >
                       {cat === 'food' ? '美食' : cat === 'activity' ? '景點' : cat === 'transport' ? '交通' : cat === 'shopping' ? '購物' : '其他'}
