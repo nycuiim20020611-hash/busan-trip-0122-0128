@@ -37,7 +37,7 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
 
   const handleAddNew = () => {
     const newItem: ItineraryItem = {
-      id: Date.now().toString(),
+      id: `i${Date.now()}`,
       date: selectedDate === 'all' ? '2026-01-22' : selectedDate,
       time: '12:00',
       activity: '新行程',

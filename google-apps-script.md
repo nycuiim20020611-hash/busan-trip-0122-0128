@@ -61,12 +61,10 @@ function getDataFromSheet(sheet) {
 }
 
 function saveDataToSheet(sheet, data) {
-  if (!data || data.length === 0) return;
+  if (!data) return;
   
-  // Clear existing content except header? Or just clear all.
-  // Let's clear all and rewrite headers + data to be safe and handle schema changes.
   sheet.clear();
-  
+
   if (data.length === 0) return;
 
   const headers = Object.keys(data[0]);

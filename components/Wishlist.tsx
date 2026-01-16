@@ -37,7 +37,7 @@ const Wishlist: React.FC<WishlistProps> = ({ items, setItems }) => {
         e.preventDefault();
         if (!newItemName) return;
         setItems([...items, {
-            id: Date.now().toString(),
+            id: `w${Date.now()}`,
             name: newItemName,
             note: '',
             category: newItemCategory,
