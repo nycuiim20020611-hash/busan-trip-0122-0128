@@ -12,6 +12,8 @@ import { saveToStorage, getFromStorage } from './services/storage';
 const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<TabView>(TabView.HOME);
 
+  const [isSynced, setIsSynced] = useState(false);
+
   // State with LocalStorage Persistence
   const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>(() =>
     getFromStorage('itinerary', INITIAL_ITINERARY)
@@ -23,10 +25,18 @@ const App: React.FC = () => {
     getFromStorage('wishlist', INITIAL_WISHLIST)
   );
 
-  // Save on Change
-  useEffect(() => { saveToStorage('itinerary', itineraryItems); }, [itineraryItems]);
-  useEffect(() => { saveToStorage('checklist', checklistItems); }, [checklistItems]);
-  useEffect(() => { saveToStorage('wishlist', wishlistItems); }, [wishlistItems]);
+  // Save on Change - Only if synced
+  useEffect(() => {
+    if (isSynced) saveToStorage('itinerary', itineraryItems);
+  }, [itineraryItems, isSynced]);
+
+  useEffect(() => {
+    if (isSynced) saveToStorage('checklist', checklistItems);
+  }, [checklistItems, isSynced]);
+
+  useEffect(() => {
+    if (isSynced) saveToStorage('wishlist', wishlistItems);
+  }, [wishlistItems, isSynced]);
 
   // Sync from Cloud on Mount
   useEffect(() => {
@@ -44,6 +54,7 @@ const App: React.FC = () => {
 
       if (cloudData === null) {
         console.error("Sync failed. Skipping initialization to prevent data loss.");
+        // Do NOT set isSynced to true, to prevent overwriting cloud with local data
       } else if (isCloudEmpty && hasLocalData) {
         console.log("Cloud is empty, initializing with local data...");
         await storage.initializeCloudStorage({
@@ -51,12 +62,15 @@ const App: React.FC = () => {
           checklist: checklistItems,
           wishlist: wishlistItems
         });
+        setIsSynced(true); // Initialization done, allow saving
       } else if (cloudData) {
         console.log("Applying cloud data to local state...");
         // Normal sync: use cloud data
         if (cloudData.itinerary && cloudData.itinerary.length > 0) setItineraryItems(cloudData.itinerary);
         if (cloudData.checklist && cloudData.checklist.length > 0) setChecklistItems(cloudData.checklist);
         if (cloudData.wishlist && cloudData.wishlist.length > 0) setWishlistItems(cloudData.wishlist);
+
+        setIsSynced(true); // Sync done, allow saving
       }
     };
     sync();
