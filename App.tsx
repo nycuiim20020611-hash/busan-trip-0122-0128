@@ -36,12 +36,15 @@ const App: React.FC = () => {
 
       // Check if cloud is effectively empty (new sheet) but we have local data
       // If so, upload local data to initialize the sheet
-      const isCloudEmpty = (!cloudData?.itinerary?.length && !cloudData?.wishlist?.length);
+      // IMPORTANT: Only initialize if cloudData is NOT null (meaning fetch succeeded but returned empty)
+      const isCloudEmpty = (cloudData && !cloudData.itinerary?.length && !cloudData.wishlist?.length);
       const hasLocalData = (itineraryItems.length > 0 || wishlistItems.length > 0);
 
       console.log("Sync Check:", { isCloudEmpty, hasLocalData, cloudData });
 
-      if (isCloudEmpty && hasLocalData) {
+      if (cloudData === null) {
+        console.error("Sync failed. Skipping initialization to prevent data loss.");
+      } else if (isCloudEmpty && hasLocalData) {
         console.log("Cloud is empty, initializing with local data...");
         await storage.initializeCloudStorage({
           itinerary: itineraryItems,
