@@ -1,0 +1,1 @@
+const a=async()=>{try{const t=await(await fetch("https://api.exchangerate-api.com/v4/latest/TWD")).json();return t&&t.rates&&t.rates.KRW?{rate:t.rates.KRW,lastUpdate:t.date}:null}catch(e){return console.error("Failed to fetch exchange rate",e),null}};export{a as getExchangeRate};
