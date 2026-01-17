@@ -5,32 +5,28 @@ on:
     branches:
       - main
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+permissions:
+  contents: write
 
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build
         run: npm run build
         env:
-          # If you have secrets, add them here
-          # VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
-          # For client-side keys that are safe to expose or if using a proxy, you can set them here.
-          # Since this is a client-side app, the key will be bundled. 
-          # WARNING: Be careful with exposing API keys in client-side code.
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
           VITE_GOOGLE_SHEETS_API_URL: ${{ secrets.VITE_GOOGLE_SHEETS_API_URL }}
 
