@@ -52,14 +52,47 @@ const Wishlist: React.FC<WishlistProps> = ({ items, setItems }) => {
         setEditingItem(null);
     };
 
-    const handleOpenMap = async (name: string) => {
-        if (!name) return;
+    const handleOpenMap = async (location: string) => {
+        if (!location) return;
+
+        // 1. 【關鍵】先打開一個空白分頁
+        // 這必須在點擊的第一時間執行，才能避開瀏覽器的 Popup 攔截
+        const newWindow = window.open('', '_blank');
+
+        // 2. 在新分頁中給予使用者反饋 (Loading 狀態)
+        // 這樣使用者知道系統正在運作，而不是當機
+        if (newWindow) {
+            newWindow.document.title = "Naver Map 搜尋中...";
+            newWindow.document.body.innerHTML = `
+      <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;">
+        <h3>正在搜尋 Naver Map...</h3>
+        <p>正在將「${location}」轉換為韓文精準定位</p>
+        <div style="margin-top:10px; color: #666;">請稍候...</div>
+      </div>
+    `;
+        }
+
         try {
-            const { koreanName } = await getKoreanLocation(name);
-            window.open(`https://map.naver.com/p/search/${encodeURIComponent(koreanName)}`, '_blank');
+            // 3. 執行 AI 轉換
+            const result = await getKoreanLocation(location);
+
+            // 解析結果 (根據你 System Prompt 設定的 JSON key)
+            // 優先順序：韓文店名 > 韓文地址 > 原文中
+            const query = result.koreanName || result.address || location;
+
+            // 4. 拿到結果後，將剛剛那個空白分頁轉址到 Naver Map
+            if (newWindow) {
+                newWindow.location.href = `https://map.naver.com/p/search/${encodeURIComponent(query)}`;
+            }
+
         } catch (error) {
-            console.error("Failed to open map", error);
-            window.open(`https://map.naver.com/p/search/${encodeURIComponent(name)}`, '_blank');
+            console.error("Failed to translate", error);
+
+            // 5. 如果 AI 失敗或超時，還是要將分頁導向 (Fallback)
+            // 直接用中文搜尋
+            if (newWindow) {
+                newWindow.location.href = `https://map.naver.com/p/search/${encodeURIComponent(location)}`;
+            }
         }
     };
 
