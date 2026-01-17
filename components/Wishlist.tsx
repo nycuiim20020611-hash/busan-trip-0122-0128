@@ -92,10 +92,10 @@ const Wishlist: React.FC<WishlistProps> = ({ items, setItems }) => {
                         <h4 className={`font-bold text-slate-800 truncate ${item.checked ? 'line-through' : ''}`}>{item.name}</h4>
                         <button
                             onClick={(e) => { e.stopPropagation(); handleOpenMap(item.name); }}
-                            className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full hover:bg-green-200 transition-colors flex items-center gap-1 ml-2 shrink-0"
+                            className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full hover:bg-green-600 transition-colors flex items-center gap-1 ml-2 shrink-0 shadow-sm"
                             title="在 Naver Map 開啟"
                         >
-                            <MapPin size={10} /> Map
+                            <MapPin size={10} /> Naver Map
                         </button>
                     </div>
                     {item.note && <p className="text-sm text-slate-500 truncate">{item.note}</p>}

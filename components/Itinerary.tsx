@@ -216,12 +216,14 @@ const Itinerary: React.FC<ItineraryProps> = ({ items, setItems }) => {
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 mb-1">{item.activity}</h3>
                         {item.location && (
-                          <div className="flex items-center text-slate-500 text-sm mb-1">
-                            <MapPin size={14} className="mr-1" />
-                            <span className="mr-2">{item.location}</span>
+                          <div className="flex flex-wrap items-center gap-y-2 text-slate-500 text-sm mb-1">
+                            <div className="flex items-start mr-2 max-w-full">
+                              <MapPin size={14} className="mr-1 mt-0.5 flex-shrink-0" />
+                              <span className="break-all leading-tight">{item.location}</span>
+                            </div>
                             <button
                               onClick={() => handleOpenMap(item.location!)}
-                              className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full hover:bg-green-600 transition-colors flex items-center gap-1"
+                              className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full hover:bg-green-600 transition-colors flex items-center gap-1 flex-shrink-0 shadow-sm"
                               title="在 Naver Map 開啟"
                             >
                               <MapPin size={10} /> Naver Map
