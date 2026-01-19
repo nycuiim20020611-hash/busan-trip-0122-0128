@@ -35,14 +35,13 @@ npm install
 請在專案根目錄建立 `.env` 檔案，並填入以下資訊：
 
 ```env
-# OpenAI API Key (用於地點翻譯功能)
-VITE_OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
-
-# Google Apps Script Web App URL (用於資料儲存，選填)
+# Google Apps Script Web App URL (用於資料儲存與 AI 翻譯代理)
 VITE_GOOGLE_SHEETS_API_URL=https://script.google.com/macros/s/xxxx/exec
 ```
 
-> **注意**：`.env` 檔案包含敏感資訊，請勿提交至版本控制系統 (已設定在 `.gitignore`)。
+> **注意**：
+> 1. 本專案已移除前端的 `VITE_OPENAI_API_KEY` 以防止金鑰外洩。
+> 2. 請務必參考 `google-apps-script.md` 設定 Google Apps Script，並在 GAS 的 **Script Properties** 中設定 `OPENAI_API_KEY`。
 
 ### 4. 啟動開發環境
 ```bash
@@ -67,10 +66,10 @@ npm run build
 **設定步驟：**
 1. 將專案推送到 GitHub Repository。
 2. 進入 Repository 的 **Settings** > **Secrets and variables** > **Actions**。
-3. 點擊 **New repository secret**，新增以下 Secrets：
-    - `VITE_OPENAI_API_KEY`: 填入您的 OpenAI API Key。
+3. 點擊 **New repository secret**，新增以下 Secret：
     - `VITE_GOOGLE_SHEETS_API_URL`: 填入 GAS URL。
-4. 進入 **Settings** > **Pages**，確認 "Build and deployment" 的 Source 選擇 **GitHub Actions** (或待 Action 第一次執行成功後，選擇 `gh-pages` 分支)。
+    *注意：不再需要設定 VITE_OPENAI_API_KEY*。
+4. 進入 **Settings** > **Pages**，確認 "Build and deployment" 的 Source 選擇 **GitHub Actions**。
 
 ---
 

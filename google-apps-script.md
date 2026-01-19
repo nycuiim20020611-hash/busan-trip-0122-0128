@@ -32,12 +32,20 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const body = JSON.parse(e.postData.contents);
+    const contents = JSON.parse(e.postData.contents);
+    
+    // Check if this is a translation request
+    if (contents.action === 'translate_location') {
+      const result = callOpenAI(contents.location);
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
 
-    if (body.itinerary) saveDataToSheet(ss.getSheetByName('itinerary'), body.itinerary);
-    if (body.wishlist) saveDataToSheet(ss.getSheetByName('wishlist'), body.wishlist);
-    if (body.checklist) saveDataToSheet(ss.getSheetByName('checklist'), body.checklist);
+    // Otherwise, assume it's a save data request
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (contents.itinerary) saveDataToSheet(ss.getSheetByName('itinerary'), contents.itinerary);
+    if (contents.wishlist) saveDataToSheet(ss.getSheetByName('wishlist'), contents.wishlist);
+    if (contents.checklist) saveDataToSheet(ss.getSheetByName('checklist'), contents.checklist);
 
     return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -47,9 +55,54 @@ function doPost(e) {
   }
 }
 
+function callOpenAI(locationName) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('OPENAI_API_KEY');
+  if (!apiKey) {
+    return { error: 'OpenAI API Key not set in Script Properties' };
+  }
+
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const systemPrompt = `You are an expert AI assistant specialized in Korean tourism. 
+  Task: Identify the official Korean name (for Naver Map) and address for the given Chinese location name.
+  Rules:
+  1. Identify the actual business/location entity, don't just translate literally.
+  2. If it's a famous place, use the specific brand name.
+  3. Return valid JSON only.`;
+
+  const userPrompt = `Find Korean name and address for: ${locationName}. 
+  Output JSON format: {"koreanName": "...", "address": "..."}`;
+
+  const payload = {
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    response_format: { type: "json_object" }
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      'Authorization': 'Bearer ' + apiKey
+    },
+    payload: JSON.stringify(payload)
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const json = JSON.parse(response.getContentText());
+    const content = json.choices[0].message.content;
+    return JSON.parse(content);
+  } catch (e) {
+    return { error: e.toString(), koreanName: locationName, address: '' };
+  }
+}
+
 function getDataFromSheet(sheet) {
   const rows = sheet.getDataRange().getDisplayValues();
-  if (rows.length <= 1) return []; // Only header or empty
+  if (rows.length <= 1) return []; 
   const headers = rows[0];
   return rows.slice(1).map(row => {
     const obj = {};
@@ -62,17 +115,11 @@ function getDataFromSheet(sheet) {
 
 function saveDataToSheet(sheet, data) {
   if (!data) return;
-  
   sheet.clear();
-
   if (data.length === 0) return;
-
   const headers = Object.keys(data[0]);
   sheet.appendRow(headers);
-
   const rows = data.map(item => headers.map(header => item[header] || ''));
-  
-  // Batch write for performance
   sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
 }
 ```

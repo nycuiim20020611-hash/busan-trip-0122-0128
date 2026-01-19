@@ -1,63 +1,43 @@
-import OpenAI from 'openai';
+// This service now acting as a proxy to Google Apps Script
+// To prevent API Key leakage in client-side code.
 
-const API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
-
-const openai = new OpenAI({
-    apiKey: API_KEY,
-    dangerouslyAllowBrowser: true // Required for client-side usage
-});
+const GAS_API_URL = import.meta.env.VITE_GOOGLE_SHEETS_API_URL || '';
 
 export const getKoreanLocation = async (chineseName: string): Promise<{ koreanName: string; address: string }> => {
-    if (!API_KEY) {
-        console.error("OpenAI API Key is missing");
+    if (!GAS_API_URL) {
+        console.error("Google Sheets API URL is missing");
         return { koreanName: chineseName, address: '' };
     }
 
     try {
-        const completion = await openai.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: `You are an expert AI assistant specialized in Korean tourism and location services. 
-                    Your task is to identify the **official Korean name** (as registered on Naver Map) and the address for a given location name provided in Chinese.
-                    
-                    CRITICAL INSTRUCTIONS:
-                    1. Do NOT simply translate the Chinese characters literally. You must identify the actual business or location entity.
-                    2. If the location is a famous restaurant or tourist spot, return its specific brand name (e.g., '秀敏家' -> '수민이네').
-                    3. Always respond with valid JSON.`
-                },
-                {
-                    role: "user",
-                    content: `Find the official Korean name and address for the following location.
-                    
-                    Input: ${chineseName}
-                    
-                    Output format: JSON with keys "koreanName" (the search query for Naver Map) and "address".
-                    
-                    Examples:
-                    Input: 海雲台
-                    Output: {"koreanName": "해운대", "address": "부산광역시 해운대구"}
-                    
-                    Input: 秀敏家炭火烤蛤蠣
-                    Output: {"koreanName": "수민이네", "address": "부산 해운대구 청사포로58번길 118"}
-                    
-                    Input: 明洞餃子
-                    Output: {"koreanName": "명동교자", "address": "서울 중구 명동10길 29"}
-                    `
-                }
-            ],
-            model: "gpt-4o-mini",
-            response_format: { type: "json_object" }
+        // Send request to Google Apps Script proxy
+        // The detailed prompt wrapping is handled in the backend (GAS)
+        const response = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'translate_location',
+                location: chineseName
+            })
         });
 
-        const content = completion.choices[0].message.content;
-        if (content) {
-            return JSON.parse(content);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        return { koreanName: chineseName, address: '' };
+        const data = await response.json();
+
+        if (data.error) {
+            console.error("GAS Proxy Error:", data.error);
+            return { koreanName: chineseName, address: '' };
+        }
+
+        return {
+            koreanName: data.koreanName || chineseName,
+            address: data.address || ''
+        };
+
     } catch (error) {
-        console.error("Error translating location:", error);
+        console.error("Error translating location via GAS:", error);
         return { koreanName: chineseName, address: '' };
     }
 };
