@@ -1,19 +1,20 @@
-// This service now acting as a proxy to Google Apps Script
-// To prevent API Key leakage in client-side code.
+// 透過 Google Apps Script Proxy 呼叫 OpenAI API
+// 確保 API Key 永遠不會暴露在前端程式碼中
 
-const GAS_API_URL = import.meta.env.VITE_GOOGLE_SHEETS_API_URL || '';
+const GAS_URL = import.meta.env.VITE_GOOGLE_SHEETS_API_URL || '';
 
 export const getKoreanLocation = async (chineseName: string): Promise<{ koreanName: string; address: string }> => {
-    if (!GAS_API_URL) {
-        console.error("Google Sheets API URL is missing");
+    if (!GAS_URL) {
+        console.error("Google Sheets API URL is missing. Please set VITE_GOOGLE_SHEETS_API_URL in .env");
         return { koreanName: chineseName, address: '' };
     }
 
     try {
-        // Send request to Google Apps Script proxy
-        // The detailed prompt wrapping is handled in the backend (GAS)
-        const response = await fetch(GAS_API_URL, {
+        const response = await fetch(GAS_URL, {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
                 action: 'translate_location',
                 location: chineseName
@@ -24,20 +25,19 @@ export const getKoreanLocation = async (chineseName: string): Promise<{ koreanNa
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
+        const result = await response.json();
 
-        if (data.error) {
-            console.error("GAS Proxy Error:", data.error);
+        if (result.error) {
+            console.error("Translation error from GAS:", result.error);
             return { koreanName: chineseName, address: '' };
         }
 
         return {
-            koreanName: data.koreanName || chineseName,
-            address: data.address || ''
+            koreanName: result.koreanName || chineseName,
+            address: result.address || ''
         };
-
     } catch (error) {
-        console.error("Error translating location via GAS:", error);
+        console.error("Error calling GAS translation endpoint:", error);
         return { koreanName: chineseName, address: '' };
     }
 };
