@@ -53,19 +53,12 @@ const App: React.FC = () => {
       console.log("Sync Check:", { isCloudEmpty, hasLocalData, cloudData });
 
       if (cloudData === null) {
-        console.error("Sync failed. Skipping initialization to prevent data loss.");
-        // Do NOT set isSynced to true, to prevent overwriting cloud with local data
-      } else if (isCloudEmpty && hasLocalData) {
-        console.log("Cloud is empty, initializing with local data...");
-        await storage.initializeCloudStorage({
-          itinerary: itineraryItems,
-          checklist: checklistItems,
-          wishlist: wishlistItems
-        });
-        setIsSynced(true); // Initialization done, allow saving
-      } else if (cloudData) {
+        console.error("Sync failed. Keeping local mode.");
+        // 同步失敗，不設定 isSynced，保持本地模式 (不會覆蓋雲端)
+      } else {
         console.log("Applying cloud data to local state...");
-        // Normal sync: use cloud data
+        // 只有當雲端有資料時才覆蓋本地
+        // 如果雲端是空的 (cloudData != null 但欄位空)，則保持本地狀態 (例如初始範本)，但開啟同步
         if (cloudData.itinerary && cloudData.itinerary.length > 0) setItineraryItems(cloudData.itinerary);
         if (cloudData.checklist && cloudData.checklist.length > 0) setChecklistItems(cloudData.checklist);
         if (cloudData.wishlist && cloudData.wishlist.length > 0) setWishlistItems(cloudData.wishlist);
